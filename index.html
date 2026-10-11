@@ -1,0 +1,536 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>JJBA Guess Who</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600&family=Dela+Gothic+One&display=swap">
+<style>
+/* Layout: a manga-panel game table. Your ID card sits in a sticky side column next to one big board of cards. */
+:root {
+  --ink: #14101b;
+  --panel: #201a2b;
+  --panel-2: #2a2237;
+  --line: #3b3049;
+  --paper: #f6f0f9;
+  --muted: #ab9cbb;
+  --menace: #e2268d;
+  --gold: #f5c22e;
+  --shadow: rgba(0, 0, 0, .4);
+  --font-display: "Dela Gothic One", "Hiragino Kaku Gothic StdN", "Yu Gothic", "Arial Black", sans-serif;
+  --font-label: "Barlow Condensed", "Arial Narrow", "Helvetica Neue", sans-serif;
+  --font-body: "Barlow", "Helvetica Neue", Arial, sans-serif;
+  --radius: 8px;
+  color-scheme: dark;
+}
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { background: var(--ink); }
+body {
+  margin: 0;
+  background-color: var(--ink);
+  background-image: radial-gradient(circle, color-mix(in srgb, var(--menace) 16%, transparent) 1px, transparent 1.6px);
+  background-size: 16px 16px;
+  color: var(--paper);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+.wrap { max-width: 1400px; margin-inline: auto; padding-inline: 16px; padding-block: 28px 40px; }
+
+/* Header */
+.top { padding-block: 4px 24px; }
+h1 {
+  margin: 0;
+  max-width: 13ch;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: clamp(32px, 6vw, 66px);
+  line-height: 1.02;
+  text-wrap: balance;
+}
+h1 .gw { display: block; color: var(--gold); text-shadow: 4px 4px 0 var(--menace); }
+
+/* Page layout */
+.layout { display: grid; gap: 20px; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 1120px) {
+  .layout { grid-template-columns: 300px minmax(0, 1fr); align-items: start; }
+  .id-panel { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 16px); }
+}
+.panel { background: var(--panel); border: 2px solid var(--line); border-radius: var(--radius); padding: 18px; min-width: 0; }
+.panel h2 {
+  margin: 0 0 14px;
+  font: 800 14px/1 var(--font-label);
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* Buttons */
+.btn {
+  padding: 11px 14px;
+  border: 2px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel-2);
+  color: var(--paper);
+  font: 700 15px/1 var(--font-label);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: border-color .15s, background-color .15s, translate .15s;
+}
+.btn:hover { border-color: var(--muted); }
+.btn:active { translate: 1px 1px; }
+.btn.armed { background: var(--menace); border-color: var(--menace); color: var(--paper); }
+.btn:focus-visible, .card:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+
+/* Your character */
+.idcard { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 14px; align-items: center; }
+.idcard > * { transition: filter .2s; }
+.mini {
+  --c1: var(--line);
+  --c2: var(--panel-2);
+  position: relative;
+  width: 96px;
+  aspect-ratio: 1;
+  max-width: 100%;
+  border: 2px solid var(--ink);
+  border-radius: 6px;
+  overflow: hidden;
+  container-type: inline-size;
+  box-shadow: 3px 3px 0 var(--shadow);
+}
+.mini .art { position: absolute; inset: 0; }
+.idtext h3 { margin: 4px 0 2px; font-family: var(--font-display); font-weight: 400; font-size: 21px; line-height: 1.15; text-wrap: balance; }
+.tally { display: flex; align-items: baseline; gap: 10px; margin-top: 18px; padding-top: 16px; border-top: 2px dashed var(--line); }
+.tally b { font-family: var(--font-display); font-weight: 400; font-size: 44px; line-height: 1; color: var(--gold); font-variant-numeric: tabular-nums; }
+.tally span { font: 700 15px/1.2 var(--font-label); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.status { margin: 10px 0 0; min-height: 1.5em; }
+.status.last { color: var(--gold); font-weight: 600; }
+
+/* Board */
+.board-panel { container: boardp / inline-size; padding: 16px; }
+.board-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 6px 16px; margin-bottom: 16px; }
+.board-head h2 { margin: 0; }
+.hint { margin: 0; font: 600 15px/1.3 var(--font-label); letter-spacing: .03em; color: var(--muted); }
+.board-panel.picking .hint { color: var(--gold); }
+/* 54 cards: 3, 6 and 9 columns fill every row exactly. */
+.board { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+@container boardp (min-width: 560px) { .board { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; } }
+@container boardp (min-width: 860px) { .board { grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 10px; } }
+@media (max-width: 480px) { .board-panel { padding: 10px; } }
+
+/* Cards */
+.card {
+  display: block;
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius);
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  perspective: 800px;
+  container-type: inline-size;
+  transition: translate .18s ease, rotate .18s ease;
+}
+.card:hover { translate: 0 -3px; rotate: -1.5deg; }
+.card:nth-child(even):hover { rotate: 1.5deg; }
+.flip {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transition: transform .5s cubic-bezier(.35, 1.45, .55, 1);
+}
+.card.down .flip { transform: rotateY(180deg); }
+.face {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  border: 2px solid var(--ink);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: 0 0 0 1px var(--line), 3px 4px 0 var(--shadow);
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+}
+.front { background: var(--ink); }
+.board-panel.picking .card:hover .front,
+.board-panel.picking .card:focus-visible .front { box-shadow: 0 0 0 3px var(--gold), 3px 4px 0 var(--shadow); }
+.art {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: linear-gradient(165deg, var(--c2) 0%, color-mix(in srgb, var(--c2) 50%, var(--ink)) 100%);
+}
+.art::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle, var(--c1) 30%, transparent 34%) 0 0 / 8px 8px;
+  opacity: .5;
+  -webkit-mask-image: linear-gradient(205deg, #000 5%, transparent 75%);
+  mask-image: linear-gradient(205deg, #000 5%, transparent 75%);
+}
+.art img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
+}
+.init {
+  position: relative;
+  font-family: var(--font-display);
+  font-size: 32cqi;
+  line-height: 1;
+  color: var(--paper);
+  -webkit-text-stroke: .05em var(--ink);
+  paint-order: stroke fill;
+  text-shadow: .07em .07em 0 var(--c1), .1em .1em 0 var(--ink);
+}
+.star {
+  position: absolute;
+  top: 4cqi;
+  right: 5cqi;
+  font-size: max(14px, 17cqi);
+  line-height: 1;
+  color: var(--gold);
+  -webkit-text-stroke: 1px var(--ink);
+  paint-order: stroke fill;
+  text-shadow: 1px 1px 0 var(--ink);
+}
+.label { display: flex; align-items: center; min-height: 2.6em; padding: 5cqi 6cqi; background: var(--ink); border-top: 3px solid var(--c2); font-size: max(10px, 12.5cqi); }
+.nm {
+  font: 800 1em/1.05 var(--font-label);
+  letter-spacing: .02em;
+  text-transform: uppercase;
+  color: var(--paper);
+  overflow-wrap: anywhere;
+}
+.back {
+  transform: rotateY(180deg);
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(circle, color-mix(in srgb, var(--menace) 24%, transparent) 30%, transparent 34%) 0 0 / 7px 7px,
+    color-mix(in srgb, var(--panel-2) 45%, var(--ink));
+}
+.go {
+  font-family: var(--font-display);
+  font-size: 50cqi;
+  line-height: 1;
+  color: color-mix(in srgb, var(--menace) 62%, var(--ink));
+  -webkit-text-stroke: .04em var(--ink);
+  paint-order: stroke fill;
+  text-shadow: .06em .06em 0 var(--ink);
+  transform: rotate(-8deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flip, .card, .btn, .idcard > * { transition: none; }
+  .card:hover { translate: none; rotate: none; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1>JJBA <span class="gw">Guess Who</span></h1>
+  </header>
+
+  <main class="layout">
+    <section class="panel id-panel" id="idPanel" aria-labelledby="idTitle">
+      <h2 id="idTitle">Your character</h2>
+      <div class="idcard blank" id="idcard">
+        <div class="mini" id="mini" aria-hidden="true">
+          <span class="art"><span class="init" id="miniInit">?</span><img id="miniImg" alt="" hidden></span>
+          <span class="star" id="miniStar" hidden>★</span>
+        </div>
+        <div class="idtext">
+          <h3 id="idName" hidden></h3>
+        </div>
+      </div>
+      <div id="playBlock" hidden>
+        <div class="tally"><b id="tallyNum">0</b><span id="tallyOf">still standing</span></div>
+        <p class="status" id="status" aria-live="polite"></p>
+        <div class="actions">
+          <button class="btn" type="button" id="standBtn">Stand everyone up</button>
+          <button class="btn" type="button" id="newBtn">New game</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel board-panel picking" id="boardPanel" aria-labelledby="boardTitle">
+      <div class="board-head">
+        <h2 id="boardTitle">The board</h2>
+        <p class="hint" id="hint" aria-live="polite">Pick your mystery character: click any card.</p>
+      </div>
+      <div class="board" id="board"></div>
+    </section>
+  </main>
+</div>
+
+<script>
+(() => {
+  // Part number: title, card color, halftone color
+  const PARTS = {
+    1: ["Phantom Blood",          "#2c4a8c", "#e0b65a"],
+    2: ["Battle Tendency",        "#8f2f5a", "#f0a53a"],
+    3: ["Stardust Crusaders",     "#3a3d9c", "#7fd0f0"],
+    4: ["Diamond is Unbreakable", "#a8406f", "#6fd6c8"],
+    5: ["Golden Wind",            "#a8781a", "#f6e08a"],
+    6: ["Stone Ocean",            "#1d6b5e", "#9be07a"],
+    7: ["Steel Ball Run",         "#9c4e28", "#f2c46b"]
+  };
+
+  // Image id, name on the card, part, is a JoJo
+  const CAST = [
+    ["jonathan-joestar",        "Jonathan Joestar",     1, 1],
+    ["dio-brando",              "Dio Brando",           1, 0],
+    ["will-anthonio-zeppeli",   "Will A. Zeppeli",      1, 0],
+    ["robert-e-o-speedwagon",   "Speedwagon",           1, 0],
+    ["erina-pendleton",         "Erina Pendleton",      1, 0],
+
+    ["joseph-joestar",          "Joseph Joestar",       2, 1],
+    ["caesar-anthonio-zeppeli", "Caesar Zeppeli",       2, 0],
+    ["lisa-lisa",               "Lisa Lisa",            2, 0],
+    ["rudol-von-stroheim",      "Rudol von Stroheim",   2, 0],
+    ["santana",                 "Santana",              2, 0],
+    ["wamuu",                   "Wamuu",                2, 0],
+    ["esidisi",                 "Esidisi",              2, 0],
+    ["kars",                    "Kars",                 2, 0],
+
+    ["jotaro-kujo",             "Jotaro Kujo",          3, 1],
+    ["muhammad-avdol",          "Muhammad Avdol",       3, 0],
+    ["noriaki-kakyoin",         "Noriaki Kakyoin",      3, 0],
+    ["jean-pierre-polnareff",   "Jean Pierre Polnareff",3, 0],
+    ["iggy",                    "Iggy",                 3, 0],
+    ["hol-horse",               "Hol Horse",            3, 0],
+    ["vanilla-ice",             "Vanilla Ice",          3, 0],
+
+    ["josuke-higashikata",      "Josuke Higashikata",   4, 1],
+    ["koichi-hirose",           "Koichi Hirose",        4, 0],
+    ["okuyasu-nijimura",        "Okuyasu Nijimura",     4, 0],
+    ["rohan-kishibe",           "Rohan Kishibe",        4, 0],
+    ["yukako-yamagishi",        "Yukako Yamagishi",     4, 0],
+    ["shigekiyo-yangu",         "Shigekiyo Yangu",      4, 0],
+    ["yoshikage-kira",          "Yoshikage Kira",       4, 0],
+
+    ["giorno-giovanna",         "Giorno Giovanna",      5, 1],
+    ["bruno-bucciarati",        "Bruno Bucciarati",     5, 0],
+    ["leone-abbacchio",         "Leone Abbacchio",      5, 0],
+    ["guido-mista",             "Guido Mista",          5, 0],
+    ["narancia-ghirga",         "Narancia Ghirga",      5, 0],
+    ["pannacotta-fugo",         "Pannacotta Fugo",      5, 0],
+    ["trish-una",               "Trish Una",            5, 0],
+    ["risotto-nero",            "Risotto Nero",         5, 0],
+    ["vinegar-doppio",          "Vinegar Doppio",       5, 0],
+    ["diavolo",                 "Diavolo",              5, 0],
+
+    ["jolyne-cujoh",            "Jolyne Cujoh",         6, 1],
+    ["ermes-costello",          "Ermes Costello",       6, 0],
+    ["emporio-alnino",          "Emporio Alniño",       6, 0],
+    ["foo-fighters",            "Foo Fighters",         6, 0],
+    ["weather-report",          "Weather Report",       6, 0],
+    ["narciso-anasui",          "Narciso Anasui",       6, 0],
+    ["enrico-pucci",            "Enrico Pucci",         6, 0],
+
+    ["johnny-joestar",          "Johnny Joestar",       7, 1],
+    ["gyro-zeppeli",            "Gyro Zeppeli",         7, 0],
+    ["lucy-steel",              "Lucy Steel",           7, 0],
+    ["steven-steel",            "Steven Steel",         7, 0],
+    ["diego-brando",            "Diego Brando",         7, 0],
+    ["hot-pants",               "Hot Pants",            7, 0],
+    ["mountain-tim",            "Mountain Tim",         7, 0],
+    ["sandman",                 "Sandman",              7, 0],
+    ["pocoloco",                "Pocoloco",             7, 0],
+    ["funny-valentine",         "Funny Valentine",      7, 0]
+  ].map(([id, name, part, jojo]) => {
+    const words = name.split(" ");
+    const ini = (words[0][0] + (words.length > 1 ? words[words.length - 1][0] : "")).toUpperCase();
+    return { id, name, part, jojo: !!jojo, ini, img: `img/${id}.webp`, c2: PARTS[part][1], c1: PARTS[part][2] };
+  });
+
+  const BY_ID = Object.fromEntries(CAST.map(c => [c.id, c]));
+  const KEY = "jojo-guess-who:v2";
+  const $ = id => document.getElementById(id);
+  const board = $("board"), boardPanel = $("boardPanel"), hint = $("hint");
+  const idPanel = $("idPanel"), idcard = $("idcard"), mini = $("mini"), miniInit = $("miniInit"), miniImg = $("miniImg"), miniStar = $("miniStar");
+  const idName = $("idName"), playBlock = $("playBlock");
+  const tallyNum = $("tallyNum"), status = $("status");
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  const fresh = () => ({ phase: "pick", mine: null, down: new Set() });
+  let S = fresh();
+
+  const cardHTML = c => `
+    <button class="card" type="button" data-id="${c.id}" title="${c.name}" style="--c1:${c.c1};--c2:${c.c2}">
+      <span class="flip">
+        <span class="face front" aria-hidden="true">
+          <span class="art"><span class="init" hidden>${c.ini}</span><img src="${c.img}" alt="" width="240" height="240" loading="lazy" decoding="async"></span>
+          ${c.jojo ? '<span class="star">★</span>' : ""}
+          <span class="label"><span class="nm">${c.name}</span></span>
+        </span>
+        <span class="face back" aria-hidden="true"><span class="go">ゴ</span></span>
+      </span>
+    </button>`;
+
+  board.innerHTML = CAST.map(cardHTML).join("");
+  const cardEls = Object.fromEntries([...board.querySelectorAll(".card")].map(el => [el.dataset.id, el]));
+  $("tallyOf").textContent = `of ${CAST.length} still standing`;
+
+  // A picture that fails to load is swapped for the character's initials.
+  document.addEventListener("error", e => {
+    if (e.target.tagName !== "IMG") return;
+    e.target.hidden = true;
+    const init = e.target.parentElement.querySelector(".init");
+    if (init) init.hidden = false;
+  }, true);
+
+  function update() {
+    const picking = S.phase === "pick";
+    boardPanel.classList.toggle("picking", picking);
+    hint.textContent = picking
+      ? "Pick your mystery character: click any card."
+      : "Click a card to flip it down. Click again to stand it back up.";
+
+    for (const c of CAST) {
+      const el = cardEls[c.id];
+      const down = S.down.has(c.id);
+      el.classList.toggle("down", down);
+      el.setAttribute("aria-label", picking
+        ? `Choose ${c.name}`
+        : `${c.name}. ${down ? "Flipped down" : "Standing"}`);
+    }
+
+    playBlock.hidden = picking;
+    idName.hidden = picking;
+    idcard.classList.toggle("blank", picking);
+
+    if (picking) {
+      mini.removeAttribute("style");
+      miniInit.textContent = "?";
+      miniInit.hidden = false;
+      miniImg.hidden = true;
+      miniImg.removeAttribute("src");
+      miniStar.hidden = true;
+      idName.textContent = "";
+      return;
+    }
+
+    const c = BY_ID[S.mine];
+    mini.style.cssText = `--c1:${c.c1};--c2:${c.c2}`;
+    miniInit.textContent = c.ini;
+    if (miniImg.getAttribute("src") !== c.img) {
+      miniImg.src = c.img;
+      miniImg.hidden = false;
+      miniInit.hidden = true;
+    }
+    miniStar.hidden = !c.jojo;
+    idName.textContent = c.name;
+
+    const standing = CAST.length - S.down.size;
+    tallyNum.textContent = standing;
+    let msg;
+    if (standing === 1) {
+      const last = CAST.find(x => !S.down.has(x.id));
+      msg = `Only ${last.name} is left. Name them on your turn.`;
+    } else if (standing === 0) {
+      msg = "Everyone is down. Stand someone back up.";
+    } else if (S.down.size === 0) {
+      msg = "Ask your first question.";
+    } else {
+      msg = "Keep asking. Flip down whoever the answers rule out.";
+    }
+    status.textContent = msg;
+    status.classList.toggle("last", standing === 1);
+  }
+
+  function snap() {
+    return { phase: S.phase, mine: S.mine, down: [...S.down] };
+  }
+  function save() {
+    try { localStorage.setItem(KEY, JSON.stringify(snap())); } catch (e) {}
+  }
+  function commit() { update(); save(); }
+
+  function choose(id) {
+    S = { phase: "play", mine: id, down: new Set() };
+    commit();
+    if (idPanel.getBoundingClientRect().top < 0) {
+      idPanel.scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "start" });
+    }
+  }
+
+  board.addEventListener("click", e => {
+    const el = e.target.closest(".card");
+    if (!el) return;
+    const id = el.dataset.id;
+    if (S.phase === "pick") { choose(id); return; }
+    if (S.down.has(id)) S.down.delete(id); else S.down.add(id);
+    commit();
+  });
+
+  // Buttons that wipe progress need a second click within 3 seconds.
+  function twoStep(btn, action, skipConfirm) {
+    const label = btn.textContent;
+    let timer = null;
+    const disarm = () => { clearTimeout(timer); timer = null; btn.textContent = label; btn.classList.remove("armed"); };
+    btn.addEventListener("click", () => {
+      if (skipConfirm && skipConfirm()) { action(); return; }
+      if (!timer) {
+        btn.textContent = "Click again to confirm";
+        btn.classList.add("armed");
+        timer = setTimeout(disarm, 3000);
+        return;
+      }
+      disarm();
+      action();
+    });
+  }
+  twoStep($("standBtn"), () => { S.down.clear(); commit(); }, () => S.down.size === 0);
+  twoStep($("newBtn"), () => { S = fresh(); commit(); });
+
+  function restore(d) {
+    if (!d || typeof d !== "object") return false;
+    if (d.phase === "play" && BY_ID[d.mine]) {
+      S = {
+        phase: "play",
+        mine: d.mine,
+        down: new Set((Array.isArray(d.down) ? d.down : []).filter(id => BY_ID[id]))
+      };
+      return true;
+    }
+    if (d.phase === "pick") { S = fresh(); return true; }
+    return false;
+  }
+
+  function start(data) {
+    if (!restore(data && data.state)) {
+      try { restore(JSON.parse(localStorage.getItem(KEY) || "null")); } catch (e) {}
+    }
+    update();
+  }
+
+  const hot = window.claude && window.claude.hot;
+  try { if (hot && hot.snapshot) hot.snapshot(() => ({ state: snap() })); } catch (e) {}
+  if (hot && hot.ready) hot.ready(start); else start((hot && hot.data) || {});
+})();
+</script>
+</body>
+</html>
